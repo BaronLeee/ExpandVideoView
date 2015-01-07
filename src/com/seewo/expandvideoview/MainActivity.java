@@ -27,4 +27,28 @@ public class MainActivity extends Activity {
 		return true;
 	}
 
+	@Override
+	protected void onResume() {
+		super.onResume();
+		if (mVideoView != null) {
+			mVideoView.restoreState();
+		}
+	}
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+		if (mVideoView != null)
+			mVideoView.storeState();
+	}
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+		if (mVideoView != null) {
+			mVideoView.destroy();
+		}
+	}
+
 }

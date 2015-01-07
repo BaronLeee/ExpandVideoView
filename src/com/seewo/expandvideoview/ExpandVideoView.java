@@ -75,6 +75,7 @@ import java.util.UUID;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
@@ -119,6 +120,8 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 	private Button mScreenShotBtn;
 	private MediaMetadataRetriever mMediaMetadataRetriever;
 	private VideoView mVideoView;
+
+	private static Bundle mStateBundle;
 
 	private String mVideoPath;
 	private boolean isPlaying = false;
@@ -193,6 +196,7 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 
 	public void initData() {
 		mMediaMetadataRetriever = new MediaMetadataRetriever();
+		mStateBundle = new Bundle();
 		initListener();
 		notifySwitchBtnToChange();
 	}
@@ -392,4 +396,31 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		return mScreenShotDesPath + UUID.randomUUID().toString() + ".png";
 	}
 
+	public void storeState() {
+		int stopTime = mVideoView.getCurrentPosition();
+		Log.v(TAG, "stopTime:" + stopTime);
+		mStateBundle.putInt("stopTime", stopTime);
+		mStateBundle.putBoolean("isPlaying", mVideoView.isPlaying());
+	}
+
+	public void restoreState() {
+		if (mStateBundle.isEmpty()) {
+			Log.v(TAG, "doesn't save last states");
+			return;
+		}
+		int startTime = mStateBundle.getInt("stopTime");
+		boolean isPlaying = mStateBundle.getBoolean("isPlaying");
+		if (mVideoView != null) {
+			mVideoView.seekTo(startTime);
+			if (isPlaying) {
+				mVideoView.start();
+			} else {
+				mVideoView.pause();
+			}
+		}
+	}
+
+	public void destroy() {
+		mHandler.removeCallbacks(updatePlayProgress);
+	}
 }
