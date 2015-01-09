@@ -75,6 +75,7 @@ import java.util.UUID;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -92,7 +93,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
-import com.seewo.common.CommonUtil;
+import com.seewo.common.ExpandVideoViewUtil;
 
 /**
  * @file ExpandVideoView.java
@@ -101,14 +102,28 @@ import com.seewo.common.CommonUtil;
  * @date 2015-1-6 create
  * 
  */
-public class ExpandVideoView extends LinearLayout implements OnClickListener {
+public class ExpandVideoView extends LinearLayout implements OnClickListener, IUpdateListener {
 	private static final String TAG = "ExpandVideoView";
-	private static final int UPDATE_INTERVAL = 100;
+	private static final int UPDATE_INTERVAL = 500;
 	private static final int CHANGED_STEP = 3000;
-	private static final int BACK = 1;
-	private static final int FORWARD = -1;
+
 	private static final String DEFAULT_SCREEN_SHOT_DEST_PATH =
 			Environment.getExternalStorageDirectory() + File.separator + "ExpandVideoView" + File.separator + "ScreenShot" + File.separator;
+
+	private static final int SWITCH_PLAY_STATE = 1;
+	private static final int BACK = 2;
+	private static final int FORWARD = 3;
+	private static final int SCREEN_SHOT = 4;
+	private static final int DEFAULT_ACTION = -1;
+
+	private static final int SCREEN_BTN_ENABLE = -2;
+	private static final int SCREEN_BTN_DISABLED = -3;
+
+	private static final int SWITCH_TO_PLAY = -4;
+	private static final int SWITCH_TO_PAUSE = -5;
+
+	private static final int SCREEN_SHOT_SUCCESS = -1;
+	private static final int UPDATE_CUR_TIME = 0;
 
 	private Context mContext;;
 	private TextView mCurrentTimeView;
@@ -120,7 +135,7 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 	private Button mScreenShotBtn;
 	private MediaMetadataRetriever mMediaMetadataRetriever;
 	private VideoView mVideoView;
-
+	private UpdatePlayProgress mUpdateProgress;
 	private static Bundle mStateBundle;
 
 	private String mVideoPath;
@@ -128,21 +143,28 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 	private int mVideoTotalLength;
 	private int mCurrentPosition;
 	private String mScreenShotDesPath = DEFAULT_SCREEN_SHOT_DEST_PATH;
+	private boolean isRunning = true;
 
+	private int mAction = DEFAULT_ACTION;
 	private Handler mHandler = new Handler() {
 
 		@Override
 		public void handleMessage(Message msg) {
-			if (msg.what == -1) {
+			if (msg.what == SCREEN_SHOT_SUCCESS) {
 				Toast.makeText(mContext, "保存截图成功", Toast.LENGTH_SHORT).show();
 
-			} else {
-				mCurrentPosition = msg.what;
-				mPlayProgress.setProgress(mCurrentPosition);
-				mCurrentTimeView.setText(CommonUtil.getStandardTime(mCurrentPosition / 1000));
-
+			} else if (msg.what == SCREEN_BTN_ENABLE) {
+				mScreenShotBtn.setEnabled(true);
+			} else if (msg.what == SCREEN_BTN_DISABLED) {
+				mScreenShotBtn.setEnabled(false);
+			} else if (msg.what == SWITCH_TO_PLAY) {
+				mSwitchPlayStateBtn.setText("播放");
+			} else if (msg.what == SWITCH_TO_PAUSE) {
+				mSwitchPlayStateBtn.setText("暂停");
 			}
-
+			else if (msg.what == UPDATE_CUR_TIME) {
+				mCurrentTimeView.setText(ExpandVideoViewUtil.getStandardTime(mCurrentPosition / 1000));
+			}
 		}
 
 	};
@@ -154,7 +176,10 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 			int progress = seekBar.getProgress();
 			if (mVideoView != null) {
 				mVideoView.seekTo(progress);
-				mScreenShotBtn.setEnabled(true);
+				if (!isPlaying) {
+					mHandler.sendEmptyMessage(SCREEN_BTN_ENABLE);
+				}
+
 			}
 		}
 
@@ -164,6 +189,19 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 
 		@Override
 		public void onProgressChanged(SeekBar arg0, int arg1, boolean arg2) {
+
+		}
+	};
+	MediaPlayer.OnCompletionListener mCompletionListener = new MediaPlayer.OnCompletionListener() {
+
+		@Override
+		public void onCompletion(MediaPlayer mp) {
+			Log.v(TAG, "play end");
+			mVideoView.pause();
+			isPlaying = false;
+			mHandler.sendEmptyMessage(SWITCH_TO_PLAY);
+			mCurrentPosition = 0;
+			mHandler.sendEmptyMessage(SCREEN_BTN_ENABLE);
 		}
 	};
 
@@ -178,7 +216,14 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 	}
 
 	@Override
+	protected void onDetachedFromWindow() {
+		super.onDetachedFromWindow();
+		Log.v(TAG, "---->onDetachedFtromWindow");
+	}
+
+	@Override
 	protected void onFinishInflate() {
+		Log.v(TAG, "---->onFinishInflate");
 		initView();
 		initData();
 	}
@@ -199,6 +244,8 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		mStateBundle = new Bundle();
 		initListener();
 		notifySwitchBtnToChange();
+
+		new Thread(new ActionListener()).start();
 	}
 
 	public void initListener() {
@@ -207,13 +254,14 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		mSwitchPlayStateBtn.setOnClickListener(this);
 		mScreenShotBtn.setOnClickListener(this);
 		mPlayProgress.setOnSeekBarChangeListener(mSeekBarChangeListener);
+		mVideoView.setOnCompletionListener(mCompletionListener);
 	}
 
 	private void notifySwitchBtnToChange() {
-		if (mVideoView.isPlaying()) {
-			mSwitchPlayStateBtn.setText("暂停");
+		if (isPlaying) {
+			mHandler.sendEmptyMessage(SWITCH_TO_PAUSE);
 		} else {
-			mSwitchPlayStateBtn.setText("播放");
+			mHandler.sendEmptyMessage(SWITCH_TO_PLAY);
 		}
 	}
 
@@ -222,7 +270,7 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		if (path != null) {
 			mVideoPath = path;
 			mVideoTotalLength = getVideoTimeLegth(mVideoPath);
-			String duration = CommonUtil.getStandardTime(mVideoTotalLength);
+			String duration = ExpandVideoViewUtil.getStandardTime(mVideoTotalLength);
 			mPlayProgress.setMax(mVideoTotalLength * 1000);
 			Log.v(TAG, "视频长度：" + duration);
 			mTotalTimeView.setText(duration);
@@ -253,9 +301,13 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		mVideoView.setVideoPath(mVideoPath);
 		Log.v(TAG, "start play");
 		mVideoView.start();
-		mSwitchPlayStateBtn.setText("暂停");
+
 		mVideoView.seekTo(playPoint);
-		mHandler.post(updatePlayProgress);
+		isPlaying = true;
+		notifySwitchBtnToChange();
+		mUpdateProgress = new UpdatePlayProgress();
+		mUpdateProgress.setmUpdateListener(this);
+		new Thread(mUpdateProgress).start();
 	}
 
 	public void switchPlayState() {
@@ -272,46 +324,59 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		mScreenShotDesPath = desPath;
 	}
 
-	private Runnable updatePlayProgress = new Runnable() {
-		int currentPosition;
+	@Override
+	public void onClick(View v) {
+
+		if (v.getId() == R.id.btn_switch) {
+			mAction = SWITCH_PLAY_STATE;
+		} else if (v.getId() == R.id.btn_back) {
+			mAction = BACK;
+		} else if (v.getId() == R.id.btn_forward) {
+			mAction = FORWARD;
+		} else if (v.getId() == R.id.btn_shot_screen) {
+			mAction = SCREEN_SHOT;
+		}
+
+	}
+
+	private class ActionListener implements Runnable {
 
 		@Override
 		public void run() {
-			if (mVideoView.isPlaying()) {
-				currentPosition = mVideoView.getCurrentPosition();
-				mHandler.sendEmptyMessage(currentPosition);
-			}
-			mHandler.postDelayed(updatePlayProgress, UPDATE_INTERVAL);
-		}
-	};
+			Log.v(TAG, "ActionListener Thread start");
+			while (isRunning) {
 
-	@Override
-	public void onClick(View v) {
-		switch (v.getId()) {
-		case R.id.btn_switch:
-			switchPlayOrPause();
-			break;
-		case R.id.btn_back:
-			quickPlay(BACK);
-			break;
-		case R.id.btn_forward:
-			quickPlay(FORWARD);
-			break;
-		case R.id.btn_shot_screen:
-			screenShot();
-			break;
-		default:
-			break;
+				if (mAction == SWITCH_PLAY_STATE) {
+					Log.v(TAG, "click Switch button");
+					switchPlayOrPause();
+					mAction = DEFAULT_ACTION;
+				} else if (mAction == BACK) {
+					Log.v(TAG, "click Back button");
+					quickPlay(BACK);
+					mAction = DEFAULT_ACTION;
+				} else if (mAction == FORWARD) {
+					Log.v(TAG, "click Forward button");
+					quickPlay(FORWARD);
+					mAction = DEFAULT_ACTION;
+				} else if (mAction == SCREEN_SHOT) {
+					screenShot();
+					mAction = DEFAULT_ACTION;
+				}
+			}
+			Log.v(TAG, "ActionListener Thread stop");
 		}
+
 	}
 
 	private void switchPlayOrPause() {
-		if (mVideoView.isPlaying()) {
+		if (isPlaying) {
 			mVideoView.pause();
-			mScreenShotBtn.setEnabled(true);
+			mHandler.sendEmptyMessage(SCREEN_BTN_ENABLE);
+			isPlaying = false;
 		} else {
 			mVideoView.start();
-			mScreenShotBtn.setEnabled(false);
+			mHandler.sendEmptyMessage(SCREEN_BTN_DISABLED);
+			isPlaying = true;
 		}
 		notifySwitchBtnToChange();
 	}
@@ -335,16 +400,17 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		default:
 			break;
 		}
-		if (!mVideoView.isPlaying()) {
-			mScreenShotBtn.setEnabled(true);
+		if (!isPlaying) {
+			mHandler.sendEmptyMessage(SCREEN_BTN_ENABLE);
 		}
 		mVideoView.seekTo(next);
 		mPlayProgress.setProgress(next);
 		mCurrentPosition = next;
+		mHandler.sendEmptyMessage(UPDATE_CUR_TIME);
 	}
 
 	public void screenShot() {
-		mScreenShotBtn.setEnabled(false);
+		mHandler.sendEmptyMessage(SCREEN_BTN_DISABLED);
 		if (null != mVideoPath) {
 
 			new Thread(new Runnable() {
@@ -372,7 +438,7 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 			if (!pBitmap.isRecycled())
 				pBitmap.compress(Bitmap.CompressFormat.PNG, 100, lBos);
 			lBos.flush();
-			mHandler.sendEmptyMessage(-1);
+			mHandler.sendEmptyMessage(SCREEN_SHOT_SUCCESS);
 			Log.v(TAG, "file save succeed");
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -400,7 +466,7 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 		int stopTime = mVideoView.getCurrentPosition();
 		Log.v(TAG, "stopTime:" + stopTime);
 		mStateBundle.putInt("stopTime", stopTime);
-		mStateBundle.putBoolean("isPlaying", mVideoView.isPlaying());
+		mStateBundle.putBoolean("isPlaying", isPlaying);
 	}
 
 	public void restoreState() {
@@ -421,6 +487,40 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener {
 	}
 
 	public void destroy() {
-		mHandler.removeCallbacks(updatePlayProgress);
+		isRunning = false;
+	}
+
+	@Override
+	public void onUpdated() {
+		mPlayProgress.setProgress(mCurrentPosition);
+
+		mHandler.sendEmptyMessage(0);
+	}
+
+	private class UpdatePlayProgress implements Runnable {
+
+		IUpdateListener mUpdateListener;
+
+		public void setmUpdateListener(IUpdateListener mUpdateListener) {
+			this.mUpdateListener = mUpdateListener;
+		}
+
+		@Override
+		public void run() {
+			Log.v(TAG, "update thread start");
+			while (isRunning) {
+				if (isPlaying) {
+					mCurrentPosition = mVideoView.getCurrentPosition();
+					mUpdateListener.onUpdated();
+				}
+				try {
+					Thread.sleep(UPDATE_INTERVAL);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+
 	}
 }

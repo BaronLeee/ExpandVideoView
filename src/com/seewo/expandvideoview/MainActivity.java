@@ -1,14 +1,16 @@
 package com.seewo.expandvideoview;
 
-import java.io.File;
-
 import android.app.Activity;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.Menu;
 
 public class MainActivity extends Activity {
 	private ExpandVideoView mVideoView;
+	private static final String TAG = "MainActivity";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -16,8 +18,25 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		mVideoView = (ExpandVideoView) findViewById(R.id.iVideoView);
-		mVideoView.setVideoPath(Environment.getExternalStorageDirectory() + File.separator + "test.mp4");
+		Uri uri = Uri.parse("content://media/external/video/media/1908");
+		// String VideoPath = Environment.getExternalStorageDirectory() + File.separator + "test.mp4";
+		String VideoPath = getVideoPathFromUri(uri);
+		Log.v(TAG, "path is " + VideoPath);
+		mVideoView.setVideoPath(VideoPath);
+
 		mVideoView.play(0);
+	}
+
+	private String getVideoPathFromUri(Uri uri) {
+		String res = null;
+		String[] proj = { MediaStore.Video.Media.DATA };
+		Cursor cursor = getContentResolver().query(uri, proj, null, null, null);
+		if (cursor.moveToFirst()) {
+			int column_index = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA);
+			res = cursor.getString(column_index);
+		}
+		cursor.close();
+		return res;
 	}
 
 	@Override
