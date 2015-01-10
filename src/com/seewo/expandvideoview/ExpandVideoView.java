@@ -151,16 +151,16 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener, IU
 		@Override
 		public void handleMessage(Message msg) {
 			if (msg.what == SCREEN_SHOT_SUCCESS) {
-				Toast.makeText(mContext, "保存截图成功", Toast.LENGTH_SHORT).show();
+				Toast.makeText(mContext, R.string.ev_save_screen_image_successful, Toast.LENGTH_SHORT).show();
 
 			} else if (msg.what == SCREEN_BTN_ENABLE) {
 				mScreenShotBtn.setEnabled(true);
 			} else if (msg.what == SCREEN_BTN_DISABLED) {
 				mScreenShotBtn.setEnabled(false);
 			} else if (msg.what == SWITCH_TO_PLAY) {
-				mSwitchPlayStateBtn.setText("播放");
+				mSwitchPlayStateBtn.setText(R.string.ev_video_play);
 			} else if (msg.what == SWITCH_TO_PAUSE) {
-				mSwitchPlayStateBtn.setText("暂停");
+				mSwitchPlayStateBtn.setText(R.string.ev_video_pause);
 			}
 			else if (msg.what == UPDATE_CUR_TIME) {
 				mCurrentTimeView.setText(ExpandVideoViewUtil.getStandardTime(mCurrentPosition / 1000));
@@ -272,7 +272,7 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener, IU
 			mVideoTotalLength = getVideoTimeLegth(mVideoPath);
 			String duration = ExpandVideoViewUtil.getStandardTime(mVideoTotalLength);
 			mPlayProgress.setMax(mVideoTotalLength * 1000);
-			Log.v(TAG, "视频长度：" + duration);
+			Log.v(TAG, "video length：" + duration);
 			mTotalTimeView.setText(duration);
 
 		} else {
@@ -291,18 +291,23 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener, IU
 		return len / 1000;
 	}
 
+	/**
+	 * 开始进行播放
+	 * 
+	 * @param playPoint 播放开始的时间点，单位：秒
+	 */
 	public void play(int playPoint) {
 		if (mVideoPath == null || !new File(mVideoPath).exists()) {
 			Log.e(TAG, "there is no valid video source");
 			return;
 		}
-		mCurrentPosition = playPoint;
+		mCurrentPosition = playPoint * 1000;
 		Log.v(TAG, "the video path:" + mVideoPath);
 		mVideoView.setVideoPath(mVideoPath);
 		Log.v(TAG, "start play");
 		mVideoView.start();
 
-		mVideoView.seekTo(playPoint);
+		mVideoView.seekTo(mCurrentPosition);
 		isPlaying = true;
 		notifySwitchBtnToChange();
 		mUpdateProgress = new UpdatePlayProgress();
@@ -320,6 +325,11 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener, IU
 		}
 	}
 
+	/**
+	 * 设置截图的存储路径，如果没有设置，默认保存在 /storage/sdcard0/ExpandVideoView/ScreenShot/目录下
+	 * 
+	 * @param desPath 目标存储路径
+	 */
 	public void setScreenShotSavePath(String desPath) {
 		mScreenShotDesPath = desPath;
 	}
@@ -416,7 +426,6 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener, IU
 			new Thread(new Runnable() {
 				@Override
 				public void run() {
-					// mMediaMetadataRetriever.setDataSource(mVideoPath);
 					final Bitmap bitmap =
 							mMediaMetadataRetriever.getFrameAtTime(mVideoView.getCurrentPosition() * 1000,
 									MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
@@ -462,6 +471,9 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener, IU
 		return mScreenShotDesPath + UUID.randomUUID().toString() + ".png";
 	}
 
+	/**
+	 * 保存当前播放状态，在Activity onPause回调函数中执行该动作
+	 */
 	public void storeState() {
 		int stopTime = mVideoView.getCurrentPosition();
 		Log.v(TAG, "stopTime:" + stopTime);
@@ -469,6 +481,9 @@ public class ExpandVideoView extends LinearLayout implements OnClickListener, IU
 		mStateBundle.putBoolean("isPlaying", isPlaying);
 	}
 
+	/**
+	 * 恢复之前的播放状态，在Activity onResume回调函数中执行该动作
+	 */
 	public void restoreState() {
 		if (mStateBundle.isEmpty()) {
 			Log.v(TAG, "doesn't save last states");

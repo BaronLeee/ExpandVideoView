@@ -3,6 +3,10 @@
 
     <string name="app_name">ExpandVideoView</string>
     <string name="action_settings">Settings</string>
-    <string name="hello_world">Hello world!</string>
-
+     <string name="ev_save_screen_image_successful">save the screen shot successful</string>
+	 <string name="ev_video_pause">pause</string>
+      <string name = "ev_video_play">play</string>
+      <string name = "ev_backward">backward</string>
+      <string name = "ev_forward">forward</string>
+      <string name="ev_screen_shot">screen shot</string>
 </resources>

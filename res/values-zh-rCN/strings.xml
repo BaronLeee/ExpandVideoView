@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+      <string name="action_settings">设置</string>
+      <string name="ev_save_screen_image_successful">保存屏幕截图成功</string>
+      <string name="ev_video_pause">暂停</string>
+      <string name = "ev_video_play">播放</string>
+      <string name = "ev_backward">后退</string>
+      <string name = "ev_forward">前进</string>
+      <string name="ev_screen_shot">截图</string>
+</resources>

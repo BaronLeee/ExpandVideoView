@@ -52,25 +52,25 @@
                 android:id="@+id/btn_back"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="后退" />
+                android:text="@string/ev_backward" />
 
             <Button
                 android:id="@+id/btn_switch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="暂停" />
+                android:text="@string/ev_video_pause" />
 
             <Button
                 android:id="@+id/btn_forward"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="前进" />
+                android:text="@string/ev_forward" />
             <Button
                 android:id="@+id/btn_shot_screen"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:enabled="false"
-                android:text="截图"
+                android:text="@string/ev_screen_shot"
                 
                 />
         </LinearLayout>
