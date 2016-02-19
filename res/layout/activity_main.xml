@@ -8,12 +8,12 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".MainActivity" >
 
-    <com.seewo.expandvideoview.ExpandVideoView
+    <com.baron.expandvideoview.ExpandVideoView
         android:id="@+id/iVideoView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_centerHorizontal="true"
         >
-    </com.seewo.expandvideoview.ExpandVideoView>
+    </com.baron.expandvideoview.ExpandVideoView>
 
 </RelativeLayout>

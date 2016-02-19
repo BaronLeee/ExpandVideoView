@@ -64,7 +64,7 @@
  * arbitration shall be in Taipei, Taiwan and the language shall be English.
  * The arbitration award shall be final and binding to both parties.
  */
-package com.seewo.common;
+package com.baron.common;
 
 import java.io.File;
 

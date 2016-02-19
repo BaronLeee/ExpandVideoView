@@ -64,7 +64,7 @@
  * arbitration shall be in Taipei, Taiwan and the language shall be English.
  * The arbitration award shall be final and binding to both parties.
  */
-package com.seewo.expandvideoview;
+package com.baron.expandvideoview;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -93,7 +93,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
-import com.seewo.common.ExpandVideoViewUtil;
+import com.baron.common.ExpandVideoViewUtil;
+import com.seewo.expandvideoview.R;
 
 /**
  * @file ExpandVideoView.java
