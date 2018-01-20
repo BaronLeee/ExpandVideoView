@@ -8,7 +8,7 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 
-import com.seewo.expandvideoview.R;
+import com.baron.expandvideoview.R;
 
 public class MainActivity extends Activity {
 	private ExpandVideoView mVideoView;
