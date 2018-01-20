@@ -28,7 +28,7 @@ import android.widget.Toast;
 import android.widget.VideoView;
 
 import com.baron.common.ExpandVideoViewUtil;
-import com.seewo.expandvideoview.R;
+import com.baron.expandvideoview.R;
 
 /**
  * @file ExpandVideoView.java
